@@ -4,6 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>To-Do List</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="theme-color" content="#6c63ff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="To-Do">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -153,12 +159,102 @@
 
     .clear-btn:hover { text-decoration: underline; }
 
+    .feedback-btn {
+      background: none;
+      border: none;
+      color: #6c63ff;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+
+    .feedback-btn:hover { text-decoration: underline; }
+
     .empty {
       text-align: center;
       color: #bbb;
       padding: 32px 0;
       font-size: 0.95rem;
     }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: #fff;
+      border-radius: 12px;
+      padding: 28px;
+      width: 100%;
+      max-width: 400px;
+      margin: 16px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+    }
+
+    .modal h2 {
+      font-size: 1.2rem;
+      color: #1a1a2e;
+      margin-bottom: 16px;
+    }
+
+    .modal textarea {
+      width: 100%;
+      height: 100px;
+      padding: 10px 14px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .modal textarea:focus { border-color: #6c63ff; }
+
+    .modal-msg {
+      min-height: 20px;
+      font-size: 0.85rem;
+      margin: 8px 0;
+    }
+
+    .modal-msg.error   { color: #e74c3c; }
+    .modal-msg.success { color: #27ae60; }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .modal-actions button {
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-cancel {
+      background: #f0f0f0;
+      color: #555;
+    }
+
+    .btn-submit {
+      background: #6c63ff;
+      color: #fff;
+    }
+
+    .btn-submit:hover { background: #574fd6; }
   </style>
 </head>
 <body>
@@ -181,10 +277,27 @@
 
     <div class="footer">
       <span id="counter">0 tasks left</span>
-      <button class="clear-btn" onclick="clearDone()">Clear completed</button>
+      <div style="display:flex;gap:12px">
+        <button class="feedback-btn" onclick="openFeedback()">Feedback</button>
+        <button class="clear-btn" onclick="clearDone()">Clear completed</button>
+      </div>
     </div>
   </div>
 
+  <!-- Feedback Modal -->
+  <div class="modal-overlay" id="feedbackOverlay" onclick="handleOverlayClick(event)">
+    <div class="modal">
+      <h2>Send Feedback</h2>
+      <textarea id="feedbackText" placeholder="What's on your mind?"></textarea>
+      <p class="modal-msg" id="feedbackMsg"></p>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeFeedback()">Cancel</button>
+        <button class="btn-submit" onclick="handleFeedbackSubmit()">Submit</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="todo.js"></script>
   <script>
     let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
     let filter = 'all';
@@ -236,11 +349,7 @@
       const emptyMsg = document.getElementById('emptyMsg');
       const counter = document.getElementById('counter');
 
-      const visible = tasks.filter(t =>
-        filter === 'all'    ? true :
-        filter === 'active' ? !t.done :
-                               t.done
-      );
+      const visible = filterTasks(tasks, filter);
 
       list.innerHTML = visible.map(t => `
         <li>
@@ -256,11 +365,36 @@
       counter.textContent = `${remaining} task${remaining !== 1 ? 's' : ''} left`;
     }
 
-    function escapeHtml(str) {
-      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    function openFeedback() {
+      document.getElementById('feedbackText').value = '';
+      document.getElementById('feedbackMsg').textContent = '';
+      document.getElementById('feedbackMsg').className = 'modal-msg';
+      document.getElementById('feedbackOverlay').classList.add('open');
+      document.getElementById('feedbackText').focus();
+    }
+
+    function closeFeedback() {
+      document.getElementById('feedbackOverlay').classList.remove('open');
+    }
+
+    function handleOverlayClick(e) {
+      if (e.target === document.getElementById('feedbackOverlay')) closeFeedback();
+    }
+
+    function handleFeedbackSubmit() {
+      const text = document.getElementById('feedbackText').value;
+      const result = submitFeedback(text);
+      const msg = document.getElementById('feedbackMsg');
+      msg.textContent = result.message;
+      msg.className = 'modal-msg ' + (result.ok ? 'success' : 'error');
+      if (result.ok) setTimeout(closeFeedback, 1500);
     }
 
     render();
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js');
+    }
   </script>
 </body>
 </html>
