@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>To-Do List</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      display: flex;
+      justify-content: center;
+      padding: 40px 16px;
+      min-height: 100vh;
+    }
+
+    .container {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      padding: 32px;
+      width: 100%;
+      max-width: 480px;
+      height: fit-content;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      color: #1a1a2e;
+      margin-bottom: 24px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 10px 14px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus { border-color: #6c63ff; }
+
+    button.add-btn {
+      padding: 10px 18px;
+      background: #6c63ff;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button.add-btn:hover { background: #574fd6; }
+
+    .filters {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .filter-btn {
+      padding: 6px 14px;
+      border: 2px solid #e0e0e0;
+      border-radius: 20px;
+      background: #fff;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .filter-btn.active {
+      background: #6c63ff;
+      border-color: #6c63ff;
+      color: #fff;
+    }
+
+    ul { list-style: none; }
+
+    li {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid #f0f0f0;
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    li:last-child { border-bottom: none; }
+
+    li input[type="checkbox"] {
+      width: 18px; height: 18px;
+      accent-color: #6c63ff;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .task-text {
+      flex: 1;
+      font-size: 0.95rem;
+      color: #333;
+      word-break: break-word;
+    }
+
+    .task-text.done {
+      text-decoration: line-through;
+      color: #aaa;
+    }
+
+    .delete-btn {
+      background: none;
+      border: none;
+      color: #ccc;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: color 0.2s;
+      line-height: 1;
+    }
+
+    .delete-btn:hover { color: #e74c3c; }
+
+    .footer {
+      margin-top: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      color: #999;
+    }
+
+    .clear-btn {
+      background: none;
+      border: none;
+      color: #e74c3c;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+
+    .clear-btn:hover { text-decoration: underline; }
+
+    .empty {
+      text-align: center;
+      color: #bbb;
+      padding: 32px 0;
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>To-Do List</h1>
+
+    <div class="input-row">
+      <input type="text" id="taskInput" placeholder="Add a new task..." />
+      <button class="add-btn" onclick="addTask()">Add</button>
+    </div>
+
+    <div class="filters">
+      <button class="filter-btn active" onclick="setFilter('all', this)">All</button>
+      <button class="filter-btn" onclick="setFilter('active', this)">Active</button>
+      <button class="filter-btn" onclick="setFilter('done', this)">Done</button>
+    </div>
+
+    <ul id="taskList"></ul>
+    <p class="empty" id="emptyMsg" style="display:none">No tasks here.</p>
+
+    <div class="footer">
+      <span id="counter">0 tasks left</span>
+      <button class="clear-btn" onclick="clearDone()">Clear completed</button>
+    </div>
+  </div>
+
+  <script>
+    let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+    let filter = 'all';
+
+    const input = document.getElementById('taskInput');
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') addTask(); });
+
+    function save() {
+      localStorage.setItem('tasks', JSON.stringify(tasks));
+    }
+
+    function addTask() {
+      const text = input.value.trim();
+      if (!text) return;
+      tasks.push({ id: Date.now(), text, done: false });
+      input.value = '';
+      save();
+      render();
+    }
+
+    function toggleTask(id) {
+      const task = tasks.find(t => t.id === id);
+      if (task) task.done = !task.done;
+      save();
+      render();
+    }
+
+    function deleteTask(id) {
+      tasks = tasks.filter(t => t.id !== id);
+      save();
+      render();
+    }
+
+    function clearDone() {
+      tasks = tasks.filter(t => !t.done);
+      save();
+      render();
+    }
+
+    function setFilter(f, btn) {
+      filter = f;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      render();
+    }
+
+    function render() {
+      const list = document.getElementById('taskList');
+      const emptyMsg = document.getElementById('emptyMsg');
+      const counter = document.getElementById('counter');
+
+      const visible = tasks.filter(t =>
+        filter === 'all'    ? true :
+        filter === 'active' ? !t.done :
+                               t.done
+      );
+
+      list.innerHTML = visible.map(t => `
+        <li>
+          <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTask(${t.id})">
+          <span class="task-text ${t.done ? 'done' : ''}">${escapeHtml(t.text)}</span>
+          <button class="delete-btn" onclick="deleteTask(${t.id})">&#x2715;</button>
+        </li>
+      `).join('');
+
+      emptyMsg.style.display = visible.length === 0 ? 'block' : 'none';
+
+      const remaining = tasks.filter(t => !t.done).length;
+      counter.textContent = `${remaining} task${remaining !== 1 ? 's' : ''} left`;
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    render();
+  </script>
+</body>
+</html>
